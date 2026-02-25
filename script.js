@@ -60,7 +60,7 @@ backBtn.addEventListener('click', () => {
 });
 
 contactBtn.addEventListener('click', () => {
-    window.location.href = "mailto:mokshjoshi377@gmail.com"; // Placeholder
+    window.location.href = "mailto:mokshjoshi377@gmail.com";
 });
 
 function initGame() {
@@ -68,7 +68,6 @@ function initGame() {
     currentPlayer = PLAYER_BLUE;
     isAnimating = false;
     gameActive = true;
-    // updateStatus(); // Removed
     renderBoard();
     updateTheme();
 }
@@ -84,11 +83,6 @@ function updateTheme() {
 function renderBoard() {
     boardElement.innerHTML = '';
 
-    // We render column by column or row by row?
-    // Grid matches array structure: Row 0 is top.
-
-    // Actually, to handle clicks on columns easily, let's just generate cells.
-    // We can map linear index to (row, col) or just use data attributes.
 
     for (let r = 0; r < ROWS; r++) {
         for (let c = 0; c < COLS; c++) {
@@ -98,18 +92,12 @@ function renderBoard() {
             cell.dataset.col = c;
             cell.addEventListener('click', () => handleColumnClick(c));
 
-            // Add piece if exists (for re-renders without full reset, though we usually append)
-            // But for animation, we want to append fresh. 
-            // The logic: board state holds truth. DOM reflects it.
-            // If we re-render whole board, we lose running animations.
-            // Better: Init creates grid. Click updates grid.
 
             boardElement.appendChild(cell);
         }
     }
 }
 
-// Initial Render just to set up grid
 function setupBoardGrid() {
     boardElement.innerHTML = '';
     for (let r = 0; r < ROWS; r++) {
@@ -120,8 +108,6 @@ function setupBoardGrid() {
             cell.dataset.col = c;
             cell.dataset.occupied = 'false';
 
-            // Hover effects handled by handling mouseover on column logic if needed
-            // For now simple click
             cell.addEventListener('click', () => handleColumnClick(c));
             boardElement.appendChild(cell);
         }
@@ -134,9 +120,8 @@ function getCell(r, c) {
 
 function handleColumnClick(col, isAi = false) {
     if (!gameActive || isAnimating) return;
-    if (vsAI && !isAi && currentPlayer !== PLAYER_BLUE) return; // Block input during AI turn
+    if (vsAI && !isAi && currentPlayer !== PLAYER_BLUE) return;
 
-    // Find first empty row from bottom
     let targetRow = -1;
     for (let r = ROWS - 1; r >= 0; r--) {
         if (board[r][col] === 0) {
@@ -146,18 +131,11 @@ function handleColumnClick(col, isAi = false) {
     }
 
     if (targetRow === -1) {
-        // Column full
         if (isAi && aiDifficulty !== 'easy') {
-            // In medium/hard, if best move is full (fallback to random handles this, but recursive call?), retry?
-            // Actually makeAIMove ensures col is valid? 
-            // getRandomMove ensures valid. getBestMove ensures valid.
-            // But race condition if user clicks immediately? (but locked by isAi check).
-            // Just return.
         }
         return;
     }
 
-    // Place piece
     isAnimating = true;
     animatePieceDrop(targetRow, col, currentPlayer, () => {
         board[targetRow][col] = currentPlayer;
@@ -168,13 +146,11 @@ function handleColumnClick(col, isAi = false) {
             gameActive = false;
             isAnimating = false;
 
-            // Show Win Modal
             const winnerName = currentPlayer === PLAYER_BLUE ? 'Blue' : 'Red';
             winText.textContent = `${winnerName} Wins!`;
 
-            // Simultaneous show with line
             winModal.style.display = 'flex';
-            void winModal.offsetWidth; // Force reflow
+            void winModal.offsetWidth;
             winModal.classList.add('show');
 
             setTimeout(() => {
@@ -183,14 +159,14 @@ function handleColumnClick(col, isAi = false) {
                     winModal.style.display = 'none';
                     exitGame();
                 }, 300);
-            }, 3000); // 3 seconds viewing time
+            }, 3000);
             return;
         }
 
         if (checkDraw()) {
             winText.textContent = "It's a Draw!";
             winModal.style.display = 'flex';
-            void winModal.offsetWidth; // Force reflow
+            void winModal.offsetWidth;
             winModal.classList.add('show');
 
             setTimeout(() => {
@@ -227,7 +203,6 @@ function makeAIMove() {
         col = getBestMove();
     }
 
-    // Safety check if best move returns undefined (full board handled elsewhere but good to be safe)
     if (col === undefined || col === -1) col = getRandomMove();
 
     if (col !== -1) {
@@ -245,43 +220,38 @@ function getRandomMove() {
 }
 
 function getBestMove() {
-    // 1. Check for winning move
     for (let c = 0; c < COLS; c++) {
-        if (board[0][c] !== 0) continue; // Full
-        // Simulate move
+        if (board[0][c] !== 0) continue;
         let r = -1;
         for (let row = ROWS - 1; row >= 0; row--) {
             if (board[row][c] === 0) { r = row; break; }
         }
         if (r !== -1) {
-            board[r][c] = PLAYER_RED; // AI is RED
+            board[r][c] = PLAYER_RED;
             if (checkWin(r, c)) {
-                board[r][c] = 0; // Undo
+                board[r][c] = 0;
                 return c;
             }
-            board[r][c] = 0; // Undo
+            board[r][c] = 0;
         }
     }
 
-    // 2. Check for blocking move
     for (let c = 0; c < COLS; c++) {
-        if (board[0][c] !== 0) continue; // Full
-        // Simulate opponent move
+        if (board[0][c] !== 0) continue;
         let r = -1;
         for (let row = ROWS - 1; row >= 0; row--) {
             if (board[row][c] === 0) { r = row; break; }
         }
         if (r !== -1) {
-            board[r][c] = PLAYER_BLUE; // Opponent is BLUE
+            board[r][c] = PLAYER_BLUE;
             if (checkWin(r, c)) {
-                board[r][c] = 0; // Undo
+                board[r][c] = 0;
                 return c;
             }
-            board[r][c] = 0; // Undo
+            board[r][c] = 0;
         }
     }
 
-    // 3. Strategic Preference (Center)
     const centerOrder = [3, 2, 4, 1, 5, 0, 6];
     for (let c of centerOrder) {
         if (board[0][c] === 0) return c;
@@ -291,12 +261,6 @@ function getBestMove() {
 }
 
 function drawWinningLine(cells) {
-    // Sort cells to find start and end (points are somewhat scrambled from checkWin center expansion)
-    // We want the most distant pair.
-    // Or just find min R/C and max R/C?
-    // Actually, sorting by column then row (or vice versa) works for line drawing.
-
-    // Sort primarily by col, then by row.
     cells.sort((a, b) => a[1] - b[1] || a[0] - b[0]);
 
     const startCell = getCell(cells[0][0], cells[0][1]);
@@ -306,7 +270,6 @@ function drawWinningLine(cells) {
     const endRect = endCell.getBoundingClientRect();
     const boardRect = boardElement.getBoundingClientRect();
 
-    // Calculate centers relative to board
     const x1 = startRect.left - boardRect.left + startRect.width / 2;
     const y1 = startRect.top - boardRect.top + startRect.height / 2;
     const x2 = endRect.left - boardRect.left + endRect.width / 2;
@@ -320,7 +283,7 @@ function drawWinningLine(cells) {
     line.style.width = `${length}px`;
     line.style.left = `${x1}px`;
     line.style.top = `${y1}px`;
-    line.style.transform = `translateY(-50%) rotate(${angle}deg)`; // Center vertically on start point
+    line.style.transform = `translateY(-50%) rotate(${angle}deg)`;
 
     boardElement.appendChild(line);
 }
@@ -332,38 +295,8 @@ function animatePieceDrop(row, col, player, callback) {
     piece.classList.add(player === PLAYER_BLUE ? 'blue' : 'red');
     piece.classList.add('falling');
 
-    // Adjust drop distance based on row
-    // The CSS animation is fixed duration/distance for simplicity, 
-    // but to make it perfect, we can manipulate the keyframe or start position.
-    // However, since we are inside `overflow: hidden` cell, the piece appears only when inside the cell?
-    // User wants "proper falling".
-    // If the cell has overflow: hidden, we won't see it falling FROM THE TOP of the board through other cells.
-    // Fix: We shouldn't use overflow:hidden on cells if we want to see it pass through.
-    // BETTER APPROACH: 
-    // The piece shouldn't be inside the cell DIV until it lands.
-    // OR: We simulate the fall by having a separate "animation layer" on top.
-
-    // Let's try a simpler robust approach for visually pleasing fall:
-    // We add the piece to the target cell, but visual start position is high up.
-    // Since `cell` is relative, `top: -X px` works.
-    // Distance = (row index * cell size) + padding?
-
-    // BUT, if we put it in the cell (row 5), and translate Y -500px, it goes up 500px relative to that cell.
-    // That means it will pass through cells 0,1,2,3,4 visually.
-    // `overflow: hidden` on cell would CLIP it.
-    // So update style.css to REMOVE overflow:hidden from .cell
-
-    // Calculate distance
-    // approximate distance. Each row is roughly 70px (60 + 10 gap).
-    // row 0: falls ~ 100px? (from header)
-    // row 5: falls ~ 6*70 = 420px.
-
-    // Actually, let's just use a fixed large negative value that clears the board.
-    // The board height is ~6 * 70 = 420px. -500px is safe.
-
     cell.appendChild(piece);
 
-    // Wait for animation frame
     piece.addEventListener('animationend', () => {
         piece.classList.remove('falling');
         callback();
@@ -373,16 +306,15 @@ function animatePieceDrop(row, col, player, callback) {
 function checkWin(r, c) {
     const player = board[r][c];
     const directions = [
-        [0, 1],  // Horizontal
-        [1, 0],  // Vertical
-        [1, 1],  // Diagonal \
-        [1, -1]  // Diagonal /
+        [0, 1],
+        [1, 0],
+        [1, 1],
+        [1, -1]
     ];
 
     for (let [dr, dc] of directions) {
         let winningCells = [[r, c]];
 
-        // Check positive direction
         for (let i = 1; i < 4; i++) {
             const nr = r + dr * i;
             const nc = c + dc * i;
@@ -393,7 +325,6 @@ function checkWin(r, c) {
             }
         }
 
-        // Check negative direction
         for (let i = 1; i < 4; i++) {
             const nr = r - dr * i;
             const nc = c - dc * i;
@@ -413,13 +344,12 @@ function checkDraw() {
     return board.every(row => row.every(cell => cell !== 0));
 }
 
-// Prevent context menu on exit button
 exitBtn.addEventListener('contextmenu', (e) => {
     e.preventDefault();
 });
 
 function startExitTimer(e) {
-    if (e.type === 'touchstart') e.preventDefault(); // Prevent scroll/zoom
+    if (e.type === 'touchstart') e.preventDefault();
     exitBtn.classList.add('holding');
 
     exitTimer = setTimeout(() => {
@@ -433,22 +363,16 @@ function cancelExitTimer() {
 }
 
 function exitGame() {
-    // Reset game and go to start screen
-    cancelExitTimer(); // Cleanup
+    cancelExitTimer();
     gameWrapper.style.display = 'none';
     startScreen.style.display = 'flex';
-    // Optional: Reset game state entirely?
-    // User said "exit the game on the main menu".
-    // We can leave the board as is or clear it. Let's clear it for a fresh start next time.
     const cells = document.querySelectorAll('.cell');
     cells.forEach(cell => {
         cell.innerHTML = '';
         cell.dataset.occupied = 'false';
     });
-    // Remove winning lines
     const lines = document.querySelectorAll('.winning-line');
     lines.forEach(line => line.remove());
-    // Don't restart initGame here, wait for "Vs Friend" click again.
 }
 
 exitBtn.addEventListener('mousedown', startExitTimer);
@@ -458,20 +382,3 @@ exitBtn.addEventListener('mouseup', cancelExitTimer);
 exitBtn.addEventListener('mouseleave', cancelExitTimer);
 exitBtn.addEventListener('touchend', cancelExitTimer);
 exitBtn.addEventListener('touchcancel', cancelExitTimer);
-
-/* Previous restartBtn logic removed */
-/*
-restartBtn.addEventListener('click', () => {
-    const cells = document.querySelectorAll('.cell');
-    cells.forEach(cell => {
-        cell.innerHTML = '';
-        cell.dataset.occupied = 'false';
-    });
-    initGame();
-});
-*/
-
-// Initialize
-// Initialize
-// setupBoardGrid(); // Removed, handled in initGame -> renderBoard
-// initGame(); // Removed, handled by start button
